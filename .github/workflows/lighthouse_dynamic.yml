@@ -1,0 +1,43 @@
+name: Lighthouse Audit via URL File
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Read audit URL from file
+        id: readurl
+        run: |
+          echo "AUDIT_URL=$(cat audit_url.txt)" >> $GITHUB_ENV
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli@0.12.x
+
+      - name: Generate lighthouserc.json dynamically
+        run: |
+          echo '{
+            "ci": {
+              "collect": {
+                "url": ["'"$AUDIT_URL"'"],
+                "numberOfRuns": 1
+              },
+              "upload": {
+                "target": "temporary-public-storage"
+              }
+            }
+          }' > lighthouserc.json
+
+      - name: Run Lighthouse CI
+        run: lhci autorun
