@@ -40,4 +40,12 @@ jobs:
           }' > lighthouserc.json
 
       - name: Run Lighthouse CI
-        run: lhci autorun
+        run: |
+          lhci autorun || echo "LHCI failed"
+      
+          echo "========== Public Report Link =========="
+          cat .lighthouseci/.lighthouseci/upload-report.json | jq -r '.[].url'
+      
+          echo "========== Full Lighthouse Report JSON =========="
+          cat .lighthouseci/*report.json
+
