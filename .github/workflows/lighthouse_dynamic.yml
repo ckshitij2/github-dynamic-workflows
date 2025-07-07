@@ -41,7 +41,7 @@ jobs:
 
       - name: Run Lighthouse CI and print results
         run: |
-          lhci collect --outputPath=./lhci-reports
+          lhci collect --outputPath=./lhci-reports --report=html,json
           lhci upload --target=temporary-public-storage || echo "LHCI upload failed"
       
           echo "========== 📦 Public Report Link =========="
@@ -49,4 +49,5 @@ jobs:
       
           echo "========== 📄 Full Lighthouse Report JSON =========="
           cat ./lhci-reports/*.report.json | jq || echo "report.json not found"
+
 
