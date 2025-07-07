@@ -1,4 +1,4 @@
-name: Lighthouse Audit via URL File
+name: Lighthouse Audit with JSON and Public Report
 
 on:
   push:
@@ -22,14 +22,29 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install Lighthouse CI
-        run: npm install -g @lhci/cli@0.12.x
-
-      - name: Generate lighthouserc.json dynamically
+      - name: Install Lighthouse and LHCI
         run: |
+          npm install -g lighthouse @lhci/cli@0.12.x
+
+      - name: Run Lighthouse CLI and print JSON
+        run: |
+          lighthouse "$AUDIT_URL" \
+            --output=json \
+            --output-path=report.json \
+            --chrome-flags="--headless" || echo "Lighthouse run failed"
+
+          echo "========== 📄 JSON Output =========="
+          cat report.json | jq
+        env:
+          AUDIT_URL: ${{ env.AUDIT_URL }}
+
+      - name: Upload report to temporary-public-storage and print link
+        run: |
+          # Create minimal lighthouserc.json
           echo '{
             "ci": {
               "collect": {
+                "staticDistDir": ".",
                 "url": ["'"$AUDIT_URL"'"],
                 "numberOfRuns": 1
               },
@@ -39,20 +54,10 @@ jobs:
             }
           }' > lighthouserc.json
 
-      - name: Run Lighthouse CI and print results
-        run: |
-          lhci collect --outputPath=./lhci-reports --report=html,json
+          # Run only upload, skip collect (already done manually)
           lhci upload --target=temporary-public-storage || echo "LHCI upload failed"
 
-          echo "========== 📦 Public Report Link =========="
-          if [ -f .lighthouseci/upload-report.json ]; then
-            cat .lighthouseci/upload-report.json | jq -r '.[].url'
-          else
-            echo "upload-report.json not found"
-          fi
-
-          echo "========== 📄 List of files in ./lhci-reports =========="
-          ls -lh ./lhci-reports || echo "No report directory found"
-
-          echo "========== 📄 Full Lighthouse Report JSON =========="
-          find ./lhci-reports -name "*.report.json" -exec cat {} \; | jq || echo "report.json not found"
+          echo "========== 🌐 Public Report Link =========="
+          cat .lighthouseci/upload-report.json | jq -r '.[].url' || echo "upload-report.json not found"
+        env:
+          AUDIT_URL: ${{ env.AUDIT_URL }}
