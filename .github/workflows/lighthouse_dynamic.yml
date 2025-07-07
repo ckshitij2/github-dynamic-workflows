@@ -1,4 +1,4 @@
-name: Lighthouse Audit with JSON and Public Report
+name: Lighthouse Audit (JSON + Public URL)
 
 on:
   push:
@@ -22,11 +22,10 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install Lighthouse and LHCI
-        run: |
-          npm install -g lighthouse @lhci/cli@0.12.x
+      - name: Install Lighthouse CLI and LHCI
+        run: npm install -g lighthouse @lhci/cli@0.12.x
 
-      - name: Run Lighthouse CLI and print JSON
+      - name: Run Lighthouse CLI (prints JSON)
         run: |
           lighthouse "$AUDIT_URL" \
             --output=json \
@@ -38,13 +37,11 @@ jobs:
         env:
           AUDIT_URL: ${{ env.AUDIT_URL }}
 
-      - name: Upload report to temporary-public-storage and print link
+      - name: Run LHCI (upload and print report link)
         run: |
-          # Create minimal lighthouserc.json
           echo '{
             "ci": {
               "collect": {
-                "staticDistDir": ".",
                 "url": ["'"$AUDIT_URL"'"],
                 "numberOfRuns": 1
               },
@@ -54,10 +51,10 @@ jobs:
             }
           }' > lighthouserc.json
 
-          # Run only upload, skip collect (already done manually)
-          lhci upload --target=temporary-public-storage || echo "LHCI upload failed"
+          lhci autorun || echo "LHCI autorun failed"
 
-          echo "========== 🌐 Public Report Link =========="
-          cat .lighthouseci/upload-report.json | jq -r '.[].url' || echo "upload-report.json not found"
+          echo "========== 🌐 Lighthouse Public Report URL =========="
+          REPORT_URL=$(cat .lighthouseci/upload-report.json | jq -r '.[0].url')
+          echo "🔗 $REPORT_URL"
         env:
           AUDIT_URL: ${{ env.AUDIT_URL }}
